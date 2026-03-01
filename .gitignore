@@ -1,1 +1,3 @@
-node_modules/\ndist/\noutput/
+node_modules/
+dist/
+output/
