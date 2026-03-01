@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <style>
+    text {
+      font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+    .title {
+      font-size: 16px;
+      font-weight: 600;
+      fill: #222;
+    }
+    .match-label {
+      font-size: 12px;
+      font-weight: 500;
+      fill: #222;
+    }
+    .match-label-bg {
+      fill: #fff;
+      opacity: 0.85;
+    }
+    .legend-title {
+      font-size: 12px;
+      font-weight: 600;
+      fill: #333;
+    }
+    .legend-text {
+      font-size: 11px;
+      fill: #555;
+    }
+  </style>
+  <rect width="100%" height="100%" fill="#fff" />
+  <polygon
+    points="60.00,526.67 740.00,526.67 740.00,300.00 468.00,300.00 468.00,73.33 60.00,73.33"
+    fill="#f0f0f0"
+    stroke="#333"
+    stroke-width="2"
+    stroke-linejoin="round"
+  />
+  <line x1="740.00" y1="526.67" x2="740.00" y2="300.00" stroke="#e74c3c" stroke-width="4" stroke-linecap="round" opacity="0.85" />
+  <line x1="60.00" y1="73.33" x2="60.00" y2="526.67" stroke="#e74c3c" stroke-width="4" stroke-linecap="round" opacity="0.85" />
+  <line x1="740.00" y1="413.33" x2="60.00" y2="300.00" stroke="#e74c3c" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.7" />
+  <rect class="match-label-bg" x="310.00" y="345.67" width="180" height="20" rx="4" />
+  <text class="match-label" x="400.00" y="360.67" text-anchor="middle">30&apos; 0&quot; (720px)</text>
+  <line x1="60.00" y1="526.67" x2="740.00" y2="526.67" stroke="#3498db" stroke-width="4" stroke-linecap="round" opacity="0.85" />
+  <line x1="468.00" y1="73.33" x2="60.00" y2="73.33" stroke="#3498db" stroke-width="4" stroke-linecap="round" opacity="0.85" />
+  <line x1="400.00" y1="526.67" x2="264.00" y2="73.33" stroke="#3498db" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.7" />
+  <rect class="match-label-bg" x="242.00" y="289.00" width="180" height="20" rx="4" />
+  <text class="match-label" x="332.00" y="304.00" text-anchor="middle">20&apos; 0&quot; (480px)</text>
+  <line x1="740.00" y1="526.67" x2="740.00" y2="300.00" stroke="#2ecc71" stroke-width="4" stroke-linecap="round" opacity="0.85" />
+  <line x1="468.00" y1="300.00" x2="468.00" y2="73.33" stroke="#2ecc71" stroke-width="4" stroke-linecap="round" opacity="0.85" />
+  <line x1="740.00" y1="413.33" x2="468.00" y2="186.67" stroke="#2ecc71" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.7" />
+  <rect class="match-label-bg" x="514.00" y="289.00" width="180" height="20" rx="4" />
+  <text class="match-label" x="604.00" y="304.00" text-anchor="middle">12&apos; 0&quot; (288px)</text>
+  <line x1="60.00" y1="526.67" x2="740.00" y2="526.67" stroke="#f39c12" stroke-width="4" stroke-linecap="round" opacity="0.85" />
+  <line x1="740.00" y1="300.00" x2="468.00" y2="300.00" stroke="#f39c12" stroke-width="4" stroke-linecap="round" opacity="0.85" />
+  <line x1="400.00" y1="526.67" x2="604.00" y2="300.00" stroke="#f39c12" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.7" />
+  <rect class="match-label-bg" x="412.00" y="402.33" width="180" height="20" rx="4" />
+  <text class="match-label" x="502.00" y="417.33" text-anchor="middle">10&apos; 0&quot; (240px)</text>
+  <text class="title" x="400" y="28" text-anchor="middle">Scale: 2.00 px/in | Confidence: 80%</text>
+  <rect x="620" y="462" width="170" height="118" rx="6" fill="#fff" stroke="#ccc" stroke-width="1" opacity="0.92" />
+  <text class="legend-title" x="630" y="480">Dimension Matches</text>
+  <rect x="630" y="489" width="14" height="14" rx="2" fill="#e74c3c" />
+  <text class="legend-text" x="650" y="500">30&apos; 0&quot;</text>
+  <rect x="630" y="511" width="14" height="14" rx="2" fill="#3498db" />
+  <text class="legend-text" x="650" y="522">20&apos; 0&quot;</text>
+  <rect x="630" y="533" width="14" height="14" rx="2" fill="#2ecc71" />
+  <text class="legend-text" x="650" y="544">12&apos; 0&quot;</text>
+  <rect x="630" y="555" width="14" height="14" rx="2" fill="#f39c12" />
+  <text class="legend-text" x="650" y="566">10&apos; 0&quot;</text>
+</svg>

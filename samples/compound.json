@@ -1,0 +1,8 @@
+{
+  "name": "Compound Dimensions — Study",
+  "description": "Room with fractional dimensions, 15'6.5\" x 10'3\"",
+  "walls": [[0, 0], [373, 0], [373, 246], [0, 246]],
+  "dimensions": ["15' 6 1/2\"", "10' 3\""],
+  "expectedScale": 2.0,
+  "expectedUnit": "px/inch"
+}

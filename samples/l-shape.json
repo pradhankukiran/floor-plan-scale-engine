@@ -1,0 +1,8 @@
+{
+  "name": "L-Shaped Room — Living/Dining",
+  "description": "L-shaped room, outer 30'x20', notch 12'x10'",
+  "walls": [[0, 0], [720, 0], [720, 240], [432, 240], [432, 480], [0, 480]],
+  "dimensions": ["30' 0\"", "20' 0\"", "12' 0\"", "10' 0\""],
+  "expectedScale": 2.0,
+  "expectedUnit": "px/inch"
+}

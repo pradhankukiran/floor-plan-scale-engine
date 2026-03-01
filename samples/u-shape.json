@@ -1,0 +1,8 @@
+{
+  "name": "U-Shaped Room — Kitchen",
+  "description": "U-shaped room, outer 25'x18', center notch 10'x8'",
+  "walls": [[0, 0], [450, 0], [450, 324], [315, 324], [315, 180], [135, 180], [135, 324], [0, 324]],
+  "dimensions": ["25' 0\"", "18' 0\"", "10' 0\"", "8' 0\""],
+  "expectedScale": 1.5,
+  "expectedUnit": "px/inch"
+}

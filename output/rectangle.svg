@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <style>
+    text {
+      font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+    .title {
+      font-size: 16px;
+      font-weight: 600;
+      fill: #222;
+    }
+    .match-label {
+      font-size: 12px;
+      font-weight: 500;
+      fill: #222;
+    }
+    .match-label-bg {
+      fill: #fff;
+      opacity: 0.85;
+    }
+    .legend-title {
+      font-size: 12px;
+      font-weight: 600;
+      fill: #333;
+    }
+    .legend-text {
+      font-size: 11px;
+      fill: #555;
+    }
+  </style>
+  <rect width="100%" height="100%" fill="#fff" />
+  <polygon
+    points="60.00,488.36 740.00,488.36 740.00,111.64 60.00,111.64"
+    fill="#f0f0f0"
+    stroke="#333"
+    stroke-width="2"
+    stroke-linejoin="round"
+  />
+  <line x1="740.00" y1="488.36" x2="740.00" y2="111.64" stroke="#e74c3c" stroke-width="4" stroke-linecap="round" opacity="0.85" />
+  <line x1="60.00" y1="111.64" x2="60.00" y2="488.36" stroke="#e74c3c" stroke-width="4" stroke-linecap="round" opacity="0.85" />
+  <line x1="740.00" y1="300.00" x2="60.00" y2="300.00" stroke="#e74c3c" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.7" />
+  <rect class="match-label-bg" x="310.00" y="289.00" width="180" height="20" rx="4" />
+  <text class="match-label" x="400.00" y="304.00" text-anchor="middle">23&apos; 6&quot; (500px)</text>
+  <line x1="60.00" y1="488.36" x2="740.00" y2="488.36" stroke="#3498db" stroke-width="4" stroke-linecap="round" opacity="0.85" />
+  <line x1="740.00" y1="111.64" x2="60.00" y2="111.64" stroke="#3498db" stroke-width="4" stroke-linecap="round" opacity="0.85" />
+  <line x1="400.00" y1="488.36" x2="400.00" y2="111.64" stroke="#3498db" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.7" />
+  <rect class="match-label-bg" x="310.00" y="289.00" width="180" height="20" rx="4" />
+  <text class="match-label" x="400.00" y="304.00" text-anchor="middle">13&apos; 0&quot; (277px)</text>
+  <text class="title" x="400" y="28" text-anchor="middle">Scale: 1.77 px/in | Confidence: 100%</text>
+  <rect x="620" y="506" width="170" height="74" rx="6" fill="#fff" stroke="#ccc" stroke-width="1" opacity="0.92" />
+  <text class="legend-title" x="630" y="524">Dimension Matches</text>
+  <rect x="630" y="533" width="14" height="14" rx="2" fill="#e74c3c" />
+  <text class="legend-text" x="650" y="544">23&apos; 6&quot;</text>
+  <rect x="630" y="555" width="14" height="14" rx="2" fill="#3498db" />
+  <text class="legend-text" x="650" y="566">13&apos; 0&quot;</text>
+</svg>

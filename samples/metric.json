@@ -1,0 +1,8 @@
+{
+  "name": "Metric Room — European Apartment",
+  "description": "Room with metric dimensions, 7.5m x 4.2m",
+  "walls": [[0, 0], [443, 0], [443, 248], [0, 248]],
+  "dimensions": ["7.5m", "4.2m"],
+  "expectedScale": 1.5,
+  "expectedUnit": "px/inch"
+}
