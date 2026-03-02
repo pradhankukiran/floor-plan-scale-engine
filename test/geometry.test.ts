@@ -228,6 +228,23 @@ describe('findExtentPairs', () => {
     expect(distances[1]).toBeCloseTo(394, 0); // X extent: 1300 - 906
   });
 
+  it('should preserve true extents for a rotated rectangle', () => {
+    const rotatedRect: Point[] = [
+      [0, 0],
+      [173.2051, 100],
+      [123.2051, 186.6025],
+      [-50, 86.6025],
+    ];
+
+    const pairs = findExtentPairs(rotatedRect);
+
+    expect(pairs).toHaveLength(2);
+
+    const distances = pairs.map((p) => p.perpendicularDistance).sort((a, b) => b - a);
+    expect(distances[0]).toBeCloseTo(200, 0);
+    expect(distances[1]).toBeCloseTo(100, 0);
+  });
+
   it('should return empty for fewer than 3 vertices', () => {
     expect(findExtentPairs([[0, 0], [100, 100]])).toHaveLength(0);
     expect(findExtentPairs([[0, 0]])).toHaveLength(0);
@@ -274,5 +291,24 @@ describe('deduplicatePairs', () => {
     const result = deduplicatePairs([pairA, pairB]);
 
     expect(result).toHaveLength(2);
+  });
+
+  it('should not merge near-equal distances from different orientations', () => {
+    const horizontal: ParallelPair = {
+      segA: [[0, 0], [200, 0]],
+      segB: [[0, 100], [200, 100]],
+      perpendicularDistance: 100,
+    };
+    const vertical: ParallelPair = {
+      segA: [[0, 0], [0, 200]],
+      segB: [[100, 0], [100, 200]],
+      perpendicularDistance: 100,
+    };
+
+    const result = deduplicatePairs([horizontal, vertical]);
+
+    expect(result).toHaveLength(2);
+    expect(result).toContain(horizontal);
+    expect(result).toContain(vertical);
   });
 });

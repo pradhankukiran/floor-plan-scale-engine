@@ -44,8 +44,8 @@ export function polygonToSegments(vertices: Point[]): Segment[] {
   const n = vertices.length;
 
   for (let i = 0; i < n; i++) {
-    const start = vertices[i];
-    const end = vertices[(i + 1) % n];
+    const start = vertices[i]!;
+    const end = vertices[(i + 1) % n]!;
 
     // Skip degenerate zero-length segments.
     if (start[0] === end[0] && start[1] === end[1]) {
@@ -86,6 +86,22 @@ export function segmentAngle(seg: Segment): number {
 }
 
 /**
+ * Minimal angular difference between two normalized segment angles.
+ *
+ * Both inputs are assumed to be in [0, PI), where 0 and PI represent the
+ * same undirected line orientation.
+ */
+function parallelAngleDifference(a: number, b: number): number {
+  let diff = Math.abs(a - b);
+
+  if (diff > Math.PI / 2) {
+    diff = Math.PI - diff;
+  }
+
+  return diff;
+}
+
+/**
  * Euclidean length of a segment.
  */
 export function segmentLength(seg: Segment): number {
@@ -108,18 +124,7 @@ export function areParallel(
   const angleA = segmentAngle(a);
   const angleB = segmentAngle(b);
 
-  const toleranceRad = toleranceDeg * DEG_TO_RAD;
-
-  // The raw difference lies in [0, PI) because both angles are normalized.
-  let diff = Math.abs(angleA - angleB);
-
-  // Account for wraparound at PI (e.g. 1-degree vs 179-degree are only
-  // 2 degrees apart in terms of parallelism).
-  if (diff > Math.PI / 2) {
-    diff = Math.PI - diff;
-  }
-
-  return diff <= toleranceRad;
+  return parallelAngleDifference(angleA, angleB) <= toleranceDeg * DEG_TO_RAD;
 }
 
 /**
@@ -210,16 +215,19 @@ export function findParallelPairs(
 
   for (let i = 0; i < long.length; i++) {
     for (let j = i + 1; j < long.length; j++) {
-      if (!areParallel(long[i], long[j])) continue;
+      const segA = long[i]!;
+      const segB = long[j]!;
 
-      const dist = perpendicularDistance(long[i], long[j]);
+      if (!areParallel(segA, segB)) continue;
+
+      const dist = perpendicularDistance(segA, segB);
 
       // Skip pairs that are too close — likely wall thickness, not room span.
       if (dist < minLength) continue;
 
       pairs.push({
-        segA: long[i],
-        segB: long[j],
+        segA,
+        segB,
         perpendicularDistance: dist,
       });
     }
@@ -241,9 +249,12 @@ export function findParallelPairs(
  */
 export function deduplicatePairs(pairs: ParallelPair[]): ParallelPair[] {
   const DISTANCE_TOLERANCE = 5; // pixels
+  const ANGLE_TOLERANCE = 5; // degrees
 
   const combinedLength = (p: ParallelPair): number =>
     segmentLength(p.segA) + segmentLength(p.segB);
+
+  const orientation = (p: ParallelPair): number => segmentAngle(p.segA);
 
   const deduplicated: ParallelPair[] = [];
 
@@ -251,7 +262,9 @@ export function deduplicatePairs(pairs: ParallelPair[]): ParallelPair[] {
     const duplicate = deduplicated.find(
       (existing) =>
         Math.abs(existing.perpendicularDistance - pair.perpendicularDistance) <=
-        DISTANCE_TOLERANCE,
+          DISTANCE_TOLERANCE &&
+        parallelAngleDifference(orientation(existing), orientation(pair)) <=
+          ANGLE_TOLERANCE * DEG_TO_RAD,
     );
 
     if (duplicate) {
@@ -268,54 +281,142 @@ export function deduplicatePairs(pairs: ParallelPair[]): ParallelPair[] {
 }
 
 /**
- * Compute bounding-box axis-aligned extent pairs for a polygon.
+ * Compute synthetic extent pairs for a polygon along its dominant wall
+ * orientations.
  *
- * Returns up to 2 synthetic `ParallelPair` objects representing the full X and
- * Y extents of the polygon's bounding box. These capture room spans that may
- * not appear as parallel segment pairs when the polygon has diagonal closing
- * edges.
+ * Returns up to 2 synthetic `ParallelPair` objects representing the full
+ * perpendicular extents of the polygon along the two longest orientation
+ * families in the wall graph. These capture room spans that may not appear as
+ * direct parallel segment pairs when the polygon has diagonal closing edges,
+ * while still working for rotated plans.
  *
  * @param vertices   Ordered polygon vertices.
  * @param minLength  Minimum extent in pixels; extents smaller than this are
  *                   omitted. Defaults to 20.
+ * @param segments   Optional precomputed polygon segments. When omitted, the
+ *                   segments are derived from `vertices`.
  */
 export function findExtentPairs(
   vertices: Point[],
   minLength: number = 20,
+  segments: Segment[] = polygonToSegments(vertices),
 ): ParallelPair[] {
   if (vertices.length < 3) return [];
 
-  let minX = Infinity;
-  let maxX = -Infinity;
-  let minY = Infinity;
-  let maxY = -Infinity;
-
-  for (const [x, y] of vertices) {
-    if (x < minX) minX = x;
-    if (x > maxX) maxX = x;
-    if (y < minY) minY = y;
-    if (y > maxY) maxY = y;
+  interface OrientationGroup {
+    angle: number;
+    totalLength: number;
+    count: number;
   }
+
+  const ANGLE_TOLERANCE = 5; // degrees
+  const groups: OrientationGroup[] = [];
+
+  for (const segment of segments) {
+    const length = segmentLength(segment);
+    if (length < minLength) continue;
+
+    const angle = segmentAngle(segment);
+    const existing = groups.find(
+      (group) =>
+        parallelAngleDifference(group.angle, angle) <=
+        ANGLE_TOLERANCE * DEG_TO_RAD,
+    );
+
+    if (existing) {
+      existing.totalLength += length;
+      existing.count += 1;
+    } else {
+      groups.push({ angle, totalLength: length, count: 1 });
+    }
+  }
+
+  const recurringGroups = groups.filter((group) => group.count > 1);
+  const candidateGroups =
+    recurringGroups.length >= 2 ? recurringGroups : groups;
+
+  candidateGroups.sort((a, b) => b.totalLength - a.totalLength);
 
   const pairs: ParallelPair[] = [];
 
-  const xExtent = maxX - minX;
-  if (xExtent >= minLength) {
-    // Two vertical segments on left/right bbox edges.
-    pairs.push({
-      segA: [[minX, minY], [minX, maxY]],
-      segB: [[maxX, minY], [maxX, maxY]],
-      perpendicularDistance: xExtent,
-    });
-  }
+  const toPoint = (
+    tangentX: number,
+    tangentY: number,
+    normalX: number,
+    normalY: number,
+    along: number,
+    normal: number,
+  ): Point => [
+    tangentX * along + normalX * normal,
+    tangentY * along + normalY * normal,
+  ];
 
-  const yExtent = maxY - minY;
-  if (yExtent >= minLength) {
-    // Two horizontal segments on top/bottom bbox edges.
+  for (const group of candidateGroups.slice(0, 2)) {
+    const tangentX = Math.cos(group.angle);
+    const tangentY = Math.sin(group.angle);
+    const normalX = -tangentY;
+    const normalY = tangentX;
+
+    let minAlong = Infinity;
+    let maxAlong = -Infinity;
+    let minNormal = Infinity;
+    let maxNormal = -Infinity;
+
+    for (const [x, y] of vertices) {
+      const along = x * tangentX + y * tangentY;
+      const normal = x * normalX + y * normalY;
+
+      if (along < minAlong) minAlong = along;
+      if (along > maxAlong) maxAlong = along;
+      if (normal < minNormal) minNormal = normal;
+      if (normal > maxNormal) maxNormal = normal;
+    }
+
+    const perpendicularExtent = maxNormal - minNormal;
+    const alongExtent = maxAlong - minAlong;
+
+    if (perpendicularExtent < minLength || alongExtent === 0) {
+      continue;
+    }
+
     pairs.push({
-      segA: [[minX, minY], [maxX, minY]],
-      segB: [[minX, maxY], [maxX, maxY]],
-      perpendicularDistance: yExtent,
+      segA: [
+        toPoint(
+          tangentX,
+          tangentY,
+          normalX,
+          normalY,
+          minAlong,
+          minNormal,
+        ),
+        toPoint(
+          tangentX,
+          tangentY,
+          normalX,
+          normalY,
+          maxAlong,
+          minNormal,
+        ),
+      ],
+      segB: [
+        toPoint(
+          tangentX,
+          tangentY,
+          normalX,
+          normalY,
+          minAlong,
+          maxNormal,
+        ),
+        toPoint(
+          tangentX,
+          tangentY,
+          normalX,
+          normalY,
+          maxAlong,
+          maxNormal,
+        ),
+      ],
+      perpendicularDistance: perpendicularExtent,
     });
   }
 

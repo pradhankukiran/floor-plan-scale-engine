@@ -70,9 +70,9 @@ export function computeScale(input: ScaleInput): ScaleOutput {
   // Stage 2: Segments -> parallel pairs (opposing walls).
   const parallelPairs = findParallelPairs(segments, minLength);
 
-  // Stage 2b: Add axis-aligned bbox extent pairs to catch spans missed by
-  // diagonal closing edges, then deduplicate the merged list.
-  const extentPairs = findExtentPairs(input.walls, minLength);
+  // Stage 2b: Add synthetic extents along the dominant wall orientations to
+  // catch spans missed by diagonal closing edges, then deduplicate.
+  const extentPairs = findExtentPairs(input.walls, minLength, segments);
   const allPairs = deduplicatePairs(
     [...parallelPairs, ...extentPairs].sort(
       (a, b) => b.perpendicularDistance - a.perpendicularDistance,

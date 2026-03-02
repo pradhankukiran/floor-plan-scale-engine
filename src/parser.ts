@@ -52,6 +52,35 @@ function parseFraction(frac: string | undefined): number {
 }
 
 /**
+ * Parse a numeric token that may be an integer, decimal, fraction, or
+ * whitespace-delimited mixed number (e.g. "1 1/2").
+ */
+function parseNumericValue(raw: string | undefined): number | null {
+  if (!raw) return null;
+
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  if (/^\d+\s+\d+\/\d+$/.test(trimmed)) {
+    const [whole, frac] = trimmed.split(/\s+/, 2);
+    const wholeValue = Number(whole);
+
+    if (Number.isNaN(wholeValue)) {
+      return null;
+    }
+
+    return wholeValue + parseFraction(frac);
+  }
+
+  if (/^\d+\/\d+$/.test(trimmed)) {
+    return parseFraction(trimmed);
+  }
+
+  const value = Number(trimmed);
+  return Number.isNaN(value) ? null : value;
+}
+
+/**
  * Round to a fixed number of decimal places to avoid floating-point
  * drift (e.g. 39.3701 * 4.5 = 177.16545000000002).
  */
@@ -69,13 +98,19 @@ function round(value: number, decimals = 4): number {
  * Metric patterns.
  *
  * Examples:
- *   4.5m   4.5 m   4500mm   450cm
+ *   4.5m   .5m   1 1/2 m   4500mm   450cm
  *
  * Capture groups:
  *   1 = numeric value (may contain decimals)
  *   2 = unit (m, cm, mm)
  */
-const METRIC_RE = /^\s*(\d+(?:\.\d+)?)\s*(mm|cm|m)\s*$/i;
+const NUMERIC_VALUE_PATTERN =
+  String.raw`(?:\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:\.\d+)?|\.\d+)`;
+
+const METRIC_RE = new RegExp(
+  String.raw`^\s*(${NUMERIC_VALUE_PATTERN})\s*(mm|cm|m)\s*$`,
+  'i',
+);
 
 /**
  * Feet-and-inches with an optional fraction on the inch part.
@@ -87,7 +122,7 @@ const METRIC_RE = /^\s*(\d+(?:\.\d+)?)\s*(mm|cm|m)\s*$/i;
  *
  * Breakdown:
  *   ^\s*                        leading whitespace
- *   (\d+(?:\.\d+)?)             (1) feet value (integer or decimal)
+ *   (<numeric value>)           (1) feet value (integer, decimal, or mixed)
  *   \s*(?:'|ft)\s*              feet marker: ' or "ft"
  *   (?:                         begin optional inch group
  *     [-\s]*\s*                   separator: dash and/or spaces
@@ -98,7 +133,10 @@ const METRIC_RE = /^\s*(\d+(?:\.\d+)?)\s*(mm|cm|m)\s*$/i;
  *   \s*$                        trailing whitespace
  */
 const FEET_INCHES_RE =
-  /^\s*(\d+(?:\.\d+)?)\s*(?:'|ft)\s*(?:[-\s]*\s*(\d+)?\s*(\d+\/\d+)?\s*(?:"|''|in))?\s*$/;
+  new RegExp(
+    String.raw`^\s*(${NUMERIC_VALUE_PATTERN})\s*(?:'|ft)\s*(?:[-\s]*\s*(\d+)?\s*(\d+\/\d+)?\s*(?:"|''|in))?\s*$`,
+    'i',
+  );
 
 /**
  * Inches-only (no feet marker).
@@ -107,10 +145,12 @@ const FEET_INCHES_RE =
  *   6"     6''     6 1/2"
  *
  * Capture groups:
- *   1 = whole inches
- *   2 = fraction (optional)
+ *   1 = numeric inch value (whole, decimal, fraction, or mixed)
  */
-const INCHES_ONLY_RE = /^\s*(\d+)\s*(\d+\/\d+)?\s*(?:"|''|in)\s*$/;
+const INCHES_ONLY_RE = new RegExp(
+  String.raw`^\s*(${NUMERIC_VALUE_PATTERN})\s*(?:"|''|in)\s*$`,
+  'i',
+);
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -131,8 +171,11 @@ export function parseDimension(raw: string): ParsedDimension | null {
   // --- Metric -----------------------------------------------------------
   const metricMatch = cleaned.match(METRIC_RE);
   if (metricMatch) {
-    const value = Number(metricMatch[1]);
-    const unit = metricMatch[2].toLowerCase();
+    const value = parseNumericValue(metricMatch[1]);
+    if (value === null) return null;
+
+    const unit = metricMatch[2]?.toLowerCase();
+    if (!unit) return null;
 
     let inches: number;
     switch (unit) {
@@ -165,20 +208,20 @@ export function parseDimension(raw: string): ParsedDimension | null {
   // --- Feet (optionally with inches) ------------------------------------
   const feetMatch = cleaned.match(FEET_INCHES_RE);
   if (feetMatch) {
-    const feetValue = Number(feetMatch[1]);
+    const feetValue = parseNumericValue(feetMatch[1]);
+    if (feetValue === null) return null;
+
     const wholeInches = feetMatch[2] ? Number(feetMatch[2]) : 0;
     const fracInches = parseFraction(feetMatch[3]);
-
-    const totalInchPart = round(wholeInches + fracInches);
-    const feet = Math.floor(feetValue);
-    const decimalFeetInches = round((feetValue - feet) * 12);
-    const totalInches = round(feet * 12 + decimalFeetInches + totalInchPart);
+    const totalInches = round(feetValue * 12 + wholeInches + fracInches);
+    const feet = Math.floor(totalInches / 12);
+    const inchPart = round(totalInches - feet * 12);
 
     return {
       original: raw,
       inches: totalInches,
       feet,
-      inchPart: round(decimalFeetInches + totalInchPart),
+      inchPart,
       unit: 'imperial',
     };
   }
@@ -186,9 +229,8 @@ export function parseDimension(raw: string): ParsedDimension | null {
   // --- Inches only ------------------------------------------------------
   const inchMatch = cleaned.match(INCHES_ONLY_RE);
   if (inchMatch) {
-    const whole = Number(inchMatch[1]);
-    const frac = parseFraction(inchMatch[2]);
-    const totalInches = round(whole + frac);
+    const totalInches = round(parseNumericValue(inchMatch[1]) ?? NaN);
+    if (Number.isNaN(totalInches)) return null;
 
     return {
       original: raw,

@@ -68,10 +68,19 @@ function matchUnderScale(
   pairs: ParallelPair[],
   dimensions: ParsedDimension[],
   scale: number,
-): { assignments: [number, number][]; totalResidual: number } {
+): {
+  assignments: [number, number][];
+  totalResidual: number;
+  matchedPairDistance: number;
+  largestMatchedPairDistance: number;
+  matchedDimensionInches: number;
+} {
   const usedDimensions = new Set<number>();
   const assignments: [number, number][] = [];
   let totalResidual = 0;
+  let matchedPairDistance = 0;
+  let largestMatchedPairDistance = 0;
+  let matchedDimensionInches = 0;
 
   for (let pi = 0; pi < pairs.length; pi++) {
     const pairDist = pairs[pi]!.perpendicularDistance;
@@ -83,6 +92,8 @@ function matchUnderScale(
       if (usedDimensions.has(di)) continue;
 
       const expectedDist = dimensions[di]!.inches * scale;
+      if (expectedDist <= 0) continue;
+
       const relativeError = Math.abs(pairDist - expectedDist) / expectedDist;
 
       if (relativeError < bestError) {
@@ -93,13 +104,27 @@ function matchUnderScale(
 
     // Accept the match only if within tolerance.
     if (bestDi !== -1 && bestError <= MATCH_TOLERANCE) {
+      const matchedDimension = dimensions[bestDi]!;
+
       usedDimensions.add(bestDi);
       assignments.push([pi, bestDi]);
       totalResidual += bestError;
+      matchedPairDistance += pairDist;
+      matchedDimensionInches += matchedDimension.inches;
+
+      if (pairDist > largestMatchedPairDistance) {
+        largestMatchedPairDistance = pairDist;
+      }
     }
   }
 
-  return { assignments, totalResidual };
+  return {
+    assignments,
+    totalResidual,
+    matchedPairDistance,
+    largestMatchedPairDistance,
+    matchedDimensionInches,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -138,8 +163,12 @@ export function computeConsensusScale(matches: DimensionMatch[]): number {
  * 1. Generate every candidate scale from each (pair, dimension) combo.
  * 2. For each candidate scale, greedily match all pairs to dimensions
  *    within a 5 % tolerance.
- * 3. Select the candidate that maximizes the number of matches.
- *    Ties are broken by lowest total residual.
+ * 3. Select the candidate that maximizes normalized coverage of both the
+ *    available dimensions and the largest available geometric spans. This
+ *    avoids over-rewarding clusters of tiny labels while also avoiding
+ *    "one huge accidental match" when the dimensions are all small.
+ *    Ties fall back to largest-span coverage, then raw coverage, count, and
+ *    residual.
  * 4. Refine the final scale using a weighted average of matched scales.
  */
 export function findBestMatching(
@@ -165,6 +194,16 @@ export function findBestMatching(
   // Sort dimensions by inches descending (largest real-world dims first).
   const sortedDims = [...dimensions].sort((a, b) => b.inches - a.inches);
 
+  const totalDimensionInches = sortedDims.reduce(
+    (sum, dimension) => sum + dimension.inches,
+    0,
+  );
+  const relevantPairDistance = sortedPairs
+    .slice(0, Math.min(sortedPairs.length, sortedDims.length))
+    .reduce((sum, pair) => sum + pair.perpendicularDistance, 0);
+  const largestRelevantPairDistance =
+    sortedPairs[0]?.perpendicularDistance ?? 0;
+
   // ----- Step 1: Generate all candidate scale values -----------------------
   //
   // For each pair i and dimension j, scale_ij = pixelDist_i / inches_j.
@@ -174,7 +213,72 @@ export function findBestMatching(
     scale: number;
     assignments: [number, number][];
     totalResidual: number;
+    matchedPairDistance: number;
+    largestMatchedPairDistance: number;
+    matchedDimensionInches: number;
   }
+
+  const EPSILON = 1e-9;
+
+  const pairCoverage = (candidate: Candidate): number =>
+    relevantPairDistance > 0
+      ? candidate.matchedPairDistance / relevantPairDistance
+      : 0;
+
+  const dimensionCoverage = (candidate: Candidate): number =>
+    totalDimensionInches > 0
+      ? candidate.matchedDimensionInches / totalDimensionInches
+      : 0;
+
+  const coverageScore = (candidate: Candidate): number =>
+    2 * dimensionCoverage(candidate) + pairCoverage(candidate);
+
+  const largestSpanCoverage = (candidate: Candidate): number =>
+    largestRelevantPairDistance > 0
+      ? candidate.largestMatchedPairDistance / largestRelevantPairDistance
+      : 0;
+
+  const averageResidual = (candidate: Candidate): number =>
+    candidate.assignments.length > 0
+      ? candidate.totalResidual / candidate.assignments.length
+      : Infinity;
+
+  const isBetterCandidate = (
+    candidate: Candidate,
+    currentBest: Candidate | undefined,
+  ): boolean => {
+    if (!currentBest) return true;
+
+    const coverageDelta =
+      coverageScore(candidate) - coverageScore(currentBest);
+    if (Math.abs(coverageDelta) > EPSILON) {
+      return coverageDelta > 0;
+    }
+
+    const largestSpanDelta =
+      largestSpanCoverage(candidate) - largestSpanCoverage(currentBest);
+    if (Math.abs(largestSpanDelta) > EPSILON) {
+      return largestSpanDelta > 0;
+    }
+
+    const pairDistanceDelta =
+      candidate.matchedPairDistance - currentBest.matchedPairDistance;
+    if (Math.abs(pairDistanceDelta) > EPSILON) {
+      return pairDistanceDelta > 0;
+    }
+
+    const dimensionDelta =
+      candidate.matchedDimensionInches - currentBest.matchedDimensionInches;
+    if (Math.abs(dimensionDelta) > EPSILON) {
+      return dimensionDelta > 0;
+    }
+
+    if (candidate.assignments.length !== currentBest.assignments.length) {
+      return candidate.assignments.length > currentBest.assignments.length;
+    }
+
+    return averageResidual(candidate) < averageResidual(currentBest);
+  };
 
   let bestCandidate: Candidate | undefined;
 
@@ -187,21 +291,30 @@ export function findBestMatching(
         sortedPairs[pi]!.perpendicularDistance / inches;
 
       // ----- Step 2: Score this candidate ----------------------------------
-      const { assignments, totalResidual } = matchUnderScale(
+      const {
+        assignments,
+        totalResidual,
+        matchedPairDistance,
+        largestMatchedPairDistance,
+        matchedDimensionInches,
+      } = matchUnderScale(
         sortedPairs,
         sortedDims,
         candidateScale,
       );
 
       // ----- Step 3: Keep the best -----------------------------------------
-      const isBetter =
-        bestCandidate === undefined ||
-        assignments.length > bestCandidate.assignments.length ||
-        (assignments.length === bestCandidate.assignments.length &&
-          totalResidual < bestCandidate.totalResidual);
+      const candidate: Candidate = {
+        scale: candidateScale,
+        assignments,
+        totalResidual,
+        matchedPairDistance,
+        largestMatchedPairDistance,
+        matchedDimensionInches,
+      };
 
-      if (isBetter) {
-        bestCandidate = { scale: candidateScale, assignments, totalResidual };
+      if (isBetterCandidate(candidate, bestCandidate)) {
+        bestCandidate = candidate;
       }
     }
   }
@@ -252,11 +365,41 @@ export function findBestMatching(
         : 0;
   }
 
-  // Confidence: fraction of dimensions that were successfully matched.
-  // We use dimensions (not pairs) as the denominator because a polygon
-  // naturally produces many more wall-span pairs than labeled dimensions.
-  // Unmatched pairs are expected; unmatched dimensions are the real signal.
-  const confidence = preliminaryMatches.length / sortedDims.length;
+  const matchedPairDistance = preliminaryMatches.reduce(
+    (sum, match) => sum + match.pair.perpendicularDistance,
+    0,
+  );
+  const largestMatchedPairDistance = preliminaryMatches.reduce(
+    (largest, match) => Math.max(largest, match.pair.perpendicularDistance),
+    0,
+  );
+  const matchedDimensionInches = preliminaryMatches.reduce(
+    (sum, match) => sum + match.dimension.inches,
+    0,
+  );
+  const weightedResidual = matchedPairDistance
+    ? preliminaryMatches.reduce(
+        (sum, match) => sum + match.residual * match.pair.perpendicularDistance,
+        0,
+      ) / matchedPairDistance
+    : 1;
+
+  const dimensionCoverageScore = totalDimensionInches
+    ? Math.min(matchedDimensionInches / totalDimensionInches, 1)
+    : 0;
+  const pairCoverageScore = relevantPairDistance
+    ? Math.min(matchedPairDistance / relevantPairDistance, 1)
+    : 0;
+  const largestSpanCoverageScore = largestRelevantPairDistance
+    ? Math.min(largestMatchedPairDistance / largestRelevantPairDistance, 1)
+    : 0;
+  const residualQuality = Math.max(0, 1 - weightedResidual / MATCH_TOLERANCE);
+  const confidence =
+    (dimensionCoverageScore +
+      pairCoverageScore +
+      largestSpanCoverageScore +
+      residualQuality) /
+    4;
 
   // Collect unmatched items (using original arrays to preserve identity).
   const unmatchedPairs = sortedPairs.filter(

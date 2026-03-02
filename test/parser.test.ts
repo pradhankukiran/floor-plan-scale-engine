@@ -52,6 +52,13 @@ describe('parseDimension — imperial formats', () => {
     expect(result!.inches).toBe(6);
   });
 
+  it('should parse decimal inches-only values', () => {
+    const result = parseDimension('8.25in');
+    expect(result).not.toBeNull();
+    expect(result!.inches).toBe(8.25);
+    expect(result!.inchPart).toBe(8.25);
+  });
+
   it("should parse 23.5' (decimal feet) as 282 inches", () => {
     const result = parseDimension("23.5'");
     expect(result).not.toBeNull();
@@ -62,6 +69,14 @@ describe('parseDimension — imperial formats', () => {
     const result = parseDimension('10\' 6 1/2"');
     expect(result).not.toBeNull();
     expect(result!.inches).toBe(126.5);
+  });
+
+  it('should normalize carried inches in mixed decimal-feet inputs', () => {
+    const result = parseDimension('10.5\' 6"');
+    expect(result).not.toBeNull();
+    expect(result!.inches).toBe(132);
+    expect(result!.feet).toBe(11);
+    expect(result!.inchPart).toBe(0);
   });
 });
 
@@ -88,6 +103,20 @@ describe('parseDimension — metric formats', () => {
     const result = parseDimension('4500mm');
     expect(result).not.toBeNull();
     expect(result!.inches).toBeCloseTo(177.165, 1);
+    expect(result!.unit).toBe('metric');
+  });
+
+  it('should parse leading-decimal metric values', () => {
+    const result = parseDimension('.5m');
+    expect(result).not.toBeNull();
+    expect(result!.inches).toBeCloseTo(19.685, 2);
+    expect(result!.unit).toBe('metric');
+  });
+
+  it('should parse mixed-number metric values', () => {
+    const result = parseDimension('1 1/2 m');
+    expect(result).not.toBeNull();
+    expect(result!.inches).toBe(59.0552);
     expect(result!.unit).toBe('metric');
   });
 });
