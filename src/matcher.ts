@@ -92,7 +92,7 @@ function matchUnderScale(
       if (usedDimensions.has(di)) continue;
 
       const expectedDist = dimensions[di]!.inches * scale;
-      if (expectedDist <= 0) continue;
+      if (expectedDist <= 1e-9) continue;
 
       const relativeError = Math.abs(pairDist - expectedDist) / expectedDist;
 
