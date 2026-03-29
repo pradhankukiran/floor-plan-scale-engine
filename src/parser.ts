@@ -229,8 +229,9 @@ export function parseDimension(raw: string): ParsedDimension | null {
   // --- Inches only ------------------------------------------------------
   const inchMatch = cleaned.match(INCHES_ONLY_RE);
   if (inchMatch) {
-    const totalInches = round(parseNumericValue(inchMatch[1]) ?? NaN);
-    if (Number.isNaN(totalInches)) return null;
+    const inchValue = parseNumericValue(inchMatch[1]);
+    if (inchValue === null) return null;
+    const totalInches = round(inchValue);
 
     return {
       original: raw,
