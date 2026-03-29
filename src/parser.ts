@@ -48,6 +48,8 @@ function parseFraction(frac: string | undefined): number {
   const num = Number(parts[0]);
   const den = Number(parts[1]);
   if (den === 0 || Number.isNaN(num) || Number.isNaN(den)) return 0;
+  // Reject improper fractions — architectural drawings use proper fractions.
+  if (num < 0 || den < 0 || num > den) return 0;
   return num / den;
 }
 
