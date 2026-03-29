@@ -324,6 +324,23 @@ export function generateSVG(options: VisualizeOptions): string {
 
   // ---- Bounding box & transform ------------------------------------------
   const bb = boundingBox(walls);
+
+  // Guard against empty walls producing Infinity/-Infinity bounding box,
+  // which cascades NaN through the transform.
+  if (walls.length === 0) {
+    const svg = [
+      `<?xml version="1.0" encoding="UTF-8"?>`,
+      `<svg xmlns="http://www.w3.org/2000/svg" ` +
+        `width="${width}" height="${height}" ` +
+        `viewBox="0 0 ${width} ${height}">`,
+      buildStyles(),
+      `  <rect width="100%" height="100%" fill="#fff" />`,
+      buildTitle(pixelsPerInch, confidence, width),
+      `</svg>`,
+    ].join('\n');
+    return svg;
+  }
+
   const transform = buildTransform(bb, width, height, padding);
 
   // ---- Assemble SVG layers -----------------------------------------------
