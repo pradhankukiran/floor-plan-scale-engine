@@ -162,7 +162,7 @@ function buildStyles(): string {
 }
 
 function buildPolygon(walls: Point[], transform: (p: Point) => Point): string {
-  if (walls.length === 0) return '';
+  if (walls.length < 3) return '';
 
   const points = walls
     .map((p) => {
