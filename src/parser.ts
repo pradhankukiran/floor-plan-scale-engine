@@ -280,7 +280,7 @@ export function formatInches(inches: number): string {
 
   // Decide how to render the inch part: omit unnecessary decimals.
   const inchStr = Number.isInteger(remaining)
-    ? String(remaining)
+    ? String(Math.floor(remaining))
     : String(remaining);
 
   return `${feet}' ${inchStr}"`;
