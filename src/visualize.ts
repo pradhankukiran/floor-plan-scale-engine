@@ -256,7 +256,7 @@ function buildLegend(
 
   const parts: string[] = [];
   const legendX = svgWidth - 180;
-  const legendY = svgHeight - 20 - matches.length * 22 - 30;
+  const legendY = Math.max(10, svgHeight - 20 - matches.length * 22 - 30);
   const boxWidth = 170;
   const boxHeight = matches.length * 22 + 30;
 
