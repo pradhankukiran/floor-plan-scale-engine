@@ -394,12 +394,14 @@ export function findBestMatching(
     ? Math.min(largestMatchedPairDistance / largestRelevantPairDistance, 1)
     : 0;
   const residualQuality = Math.max(0, 1 - weightedResidual / MATCH_TOLERANCE);
-  const confidence =
+  const confidence = Math.min(
+    1,
     (dimensionCoverageScore +
       pairCoverageScore +
       largestSpanCoverageScore +
       residualQuality) /
-    4;
+      4,
+  );
 
   // Collect unmatched items (using original arrays to preserve identity).
   const unmatchedPairs = sortedPairs.filter(
