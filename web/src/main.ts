@@ -110,12 +110,13 @@ clearBtn.addEventListener('click', () => {
   clearResults();
 });
 
-// Sync textarea changes back to editor
+// Sync textarea changes back to editor and state
 wallsInput.addEventListener('input', () => {
   try {
     const parsed = JSON.parse(wallsInput.value);
     if (Array.isArray(parsed) && parsed.length >= 3) {
-      editor.setVertices(parsed as Point[]);
+      currentWalls = parsed as Point[];
+      editor.setVertices(currentWalls);
     }
   } catch {
     // Ignore invalid JSON while user is typing
