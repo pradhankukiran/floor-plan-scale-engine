@@ -148,6 +148,7 @@ export function computeConsensusScale(matches: DimensionMatch[]): number {
 
   for (const m of matches) {
     const weight = m.dimension.inches;
+    if (weight <= 0) continue;
     weightedSum += m.pixelsPerInch * weight;
     totalWeight += weight;
   }
