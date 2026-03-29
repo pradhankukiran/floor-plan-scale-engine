@@ -153,7 +153,7 @@ export function perpendicularDistance(a: Segment, b: Segment): number {
   const dy = p2[1] - p1[1];
 
   const len = Math.sqrt(dx * dx + dy * dy);
-  if (len === 0) return 0;
+  if (len < 1e-12) return 0;
 
   // 2-D cross product: (p2 - p1) x (q - p1)
   const cross = dx * (q[1] - p1[1]) - dy * (q[0] - p1[0]);
